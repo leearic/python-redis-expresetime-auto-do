@@ -1,0 +1,71 @@
+python代码实现获取redis中key的过期通知
+
+招手熊
+
+于 2021-11-02 00:33:15 发布
+
+670
+ 收藏
+分类专栏： python 文章标签： redis python 数据库
+版权
+
+python
+同时被 2 个专栏收录
+43 篇文章1 订阅
+订阅专栏
+
+数据库
+9 篇文章0 订阅
+订阅专栏
+1.修改配置文件
+#1. 注释如下内容
+#notify-keyspace-events ""
+#2. 取消注释如下内容共
+notify-keyspace-events Ex
+1
+2
+3
+4
+然后重启redis
+
+2. python示例代码
+2.1 消息订阅
+
+import time
+import redis
+from config import config
+
+redis_conn=redis.StrictRedis.from_url(config.REDIS_CACHE_URI)
+pubsub=redis_conn.pubsub()
+pubsub.subscribe(f'__keyevent@{config.REDIS_CACHE_DB}__:expired')#注意@后面跟的是数据库名
+# pubsub.psubscribe(**{'__keyspace@0__:*': event_handler})
+
+
+while True:
+    message = pubsub.get_message()
+    if message:
+        print("[REDIS-EVENT]:",message)
+    else:
+        time.sleep(0.01)
+
+
+1
+2.2 消息发布
+
+import redis
+from config import config
+conn=redis.StrictRedis.from_url(config.REDIS_CACHE_URI)
+conn.set("tst1","test1",ex=1)
+
+
+订阅输出结果：
+
+[REDIS-EVENT]: {'type': 'subscribe', 'pattern': None, 'channel': b'__keyevent@9__:expired', 'data': 1}
+[REDIS-EVENT]: {'type': 'message', 'pattern': None, 'channel': b'__keyevent@9__:expired', 'data': b'tst1'}
+1
+2
+输出的第一行内容是订阅的客户端自身发出的，data中的值就是key。
+另外注意过期事件只能获取到key，key中的值是不返回的。
+————————————————
+版权声明：本文为CSDN博主「招手熊」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/dorlolo/article/details/121092090
